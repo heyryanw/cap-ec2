@@ -50,10 +50,6 @@ module CapEC2
       Capistrano::Configuration.env.fetch(:stage).to_s
     end
 
-    def role
-        Capistrano::Configuration.env.fetch(:roles).to_s
-    end
-
     def application
       Capistrano::Configuration.env.fetch(:application).to_s
     end
@@ -67,8 +63,11 @@ module CapEC2
       @ec2.each do |_, ec2|
         instances = ec2.instances
           .filter(tag(stages_tag), "#{stage}")
-          .filter(tag(roles_tag), "#{role}")
           .filter('instance-state-name', 'running')
+        servers << instances.select do |i|
+          instance_has_tag?(i, roles_tag, role)
+            (fetch(:ec2_filter_by_status_ok?) ? instance_status_ok?(i) : true)
+        end
       end
       servers.flatten.sort_by {|s| s.tags["Name"] || ''}
     end
